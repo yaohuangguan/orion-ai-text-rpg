@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Wallet, MapPin, Target, CheckCircle, XCircle } from 'lucide-react';
+import { Heart, Wallet, MapPin, Target, CheckCircle, XCircle, Hourglass } from 'lucide-react';
 import { GameState, Language } from '../types';
 import { translations } from '../utils/translations';
 import { ThemeStyles } from '../utils/theme';
@@ -17,6 +17,23 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ state, lang, styles }) => {
     <div className={`flex flex-col gap-4 p-4 border-b ${styles.accentBorder}/50 bg-black/40 backdrop-blur-sm lg:border-b-0 lg:border-r lg:w-72 lg:h-full lg:sticky lg:top-0 overflow-y-auto scrollbar-hide`}>
       <div className={`${styles.accent} ${styles.fontHead} text-xs tracking-widest uppercase mb-2 opacity-70`}>
         Status // {t.statusTitle}
+      </div>
+
+      {/* Narrative Progress Bar */}
+      <div className="mb-2">
+         <div className="flex items-center justify-between text-gray-400 mb-1">
+            <div className="flex items-center gap-2">
+               <Hourglass size={14} className={styles.accent} />
+               <span className="font-bold text-xs uppercase tracking-wide">{state.narrativeLabel || "Progress"}</span>
+            </div>
+            <span className={`${styles.fontHead} text-xs`}>{state.narrativeProgress}%</span>
+         </div>
+         <div className={`h-1.5 w-full bg-gray-800 rounded-full overflow-hidden border border-gray-700`}>
+            <div 
+               className={`h-full transition-all duration-700 ease-out ${styles.accentBg}`}
+               style={{ width: `${Math.min(100, Math.max(0, state.narrativeProgress))}%` }}
+            />
+         </div>
       </div>
 
       {/* HP Bar */}

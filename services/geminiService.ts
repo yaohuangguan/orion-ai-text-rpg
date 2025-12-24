@@ -1,4 +1,4 @@
-import { GoogleGenAI, ChatSession, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Chat, Type, Schema } from "@google/genai";
 import { GameResponse, GameConfig } from '../types';
 
 // The schema must strictly match the GameResponse interface
@@ -7,7 +7,7 @@ const gameResponseSchema: Schema = {
   properties: {
     narrative: {
       type: Type.STRING,
-      description: "The main story text.",
+      description: "The main story text. If the game ends, include the epilogue here.",
     },
     combatLog: {
       type: Type.ARRAY,
@@ -48,35 +48,52 @@ const gameResponseSchema: Schema = {
             }
           }
         },
-        abilities: { type: Type.ARRAY, items: { type: Type.STRING } }
+        abilities: { type: Type.ARRAY, items: { type: Type.STRING } },
+        gameStatus: { 
+          type: Type.STRING, 
+          enum: ['playing', 'victory', 'defeat'],
+          description: "Current status. Set to 'victory' or 'defeat' when the story concludes." 
+        },
+        narrativeProgress: { 
+          type: Type.INTEGER,
+          description: "An integer from 0 to 100 indicating how close the game is to the ending."
+        },
+        narrativeLabel: {
+          type: Type.STRING,
+          description: "The name of the progress bar, e.g., 'Cyberpsychosis', 'Corruption', 'Time Until Detonation', 'Quest Completion'."
+        },
+        endingSummary: {
+          type: Type.STRING,
+          description: "If gameStatus is victory/defeat, provide a 1-2 sentence summary of the outcome."
+        }
       },
-      required: ["hp", "maxHp", "money", "inventory", "location", "quests", "inCombat", "enemies", "abilities"]
+      required: ["hp", "maxHp", "money", "inventory", "location", "quests", "inCombat", "enemies", "abilities", "gameStatus", "narrativeProgress", "narrativeLabel"]
     },
     choices: { type: Type.ARRAY, items: { type: Type.STRING } },
     visualEffect: {
       type: Type.STRING,
       enum: ['none', 'glitch', 'shake_small', 'shake_heavy', 'flash_red', 'flash_white', 'scan_line', 'target_flash'],
-      description: "Screen effect based on context. 'glitch': hacked/reality distortion. 'shake_small': impact/noise. 'shake_heavy': explosion/damage. 'flash_red': danger. 'scan_line': analyzing/digital view. 'target_flash': when locking on or hitting weak point."
+      description: "Screen effect based on context."
     },
     audioCue: {
       type: Type.STRING,
-      enum: ['none', 'combat_start', 'combat_end', 'item_pickup', 'damage', 'quest_update'],
+      enum: ['none', 'combat_start', 'combat_end', 'item_pickup', 'damage', 'quest_update', 'game_over', 'game_won'],
     },
     textStyle: {
       type: Type.STRING,
       enum: ['normal', 'corrupted', 'system_log'],
-      description: "Style of the narrative text. 'corrupted': glitchy/scary/hacked text. 'system_log': computer readout/status report. 'normal': standard narration."
+      description: "Style of the narrative text."
     }
   },
   required: ["narrative", "state", "choices", "visualEffect", "audioCue", "textStyle"]
 };
 
-let chatSession: ChatSession | null = null;
+let chatSession: Chat | null = null;
 let genAI: GoogleGenAI | null = null;
 
 const getAIClient = () => {
   if (!genAI) {
-    genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return genAI;
 };
@@ -88,42 +105,36 @@ export const initializeGame = async (config: GameConfig): Promise<GameResponse> 
     ? "Language: Simplified Chinese (简体中文). Response must be in Chinese." 
     : "Language: English. Response must be in English.";
 
-  const themeInstruction = `Theme: ${config.theme}. Player Character: ${config.characterType}. Adjust currency, items, and abilities to match this theme.`;
+  const themeInstruction = `Theme: ${config.theme}. Player Character: ${config.characterType}. Adjust currency, items, abilities, and the 'narrativeLabel' to match this theme.`;
 
   chatSession = ai.chats.create({
     model: 'gemini-3-flash-preview',
     config: {
-      systemInstruction: `You are the AI Game Master for an infinite text RPG.
+      systemInstruction: `You are the AI Game Master for a TEXT RPG with a DEFINITIVE ENDING.
       
       Configuration:
       ${langInstruction}
       ${themeInstruction}
 
+      IMPORTANT - FINITE GAMEPLAY RULES:
+      1. **NO INFINITE LOOPS**: The game must have a clear beginning, middle, and end.
+      2. **Narrative Progress**: Manage 'narrativeProgress' from 0 to 100.
+         - 0-30: Intro & Rising Action.
+         - 30-70: Main Challenges & Combat.
+         - 70-90: Climax / Boss Fight.
+         - 100: Conclusion.
+      3. **Winning & Losing**:
+         - **Defeat**: If HP reaches 0, or the player makes a catastrophic choice, set 'gameStatus' to 'defeat'.
+         - **Victory**: If the player completes the main objective and progress reaches 100, set 'gameStatus' to 'victory'.
+         - **Ending**: When status is 'victory' or 'defeat', provide a final wrap-up in 'narrative' and a summary in 'endingSummary'. Clear 'choices'.
+
       Visual & Text Style Rules:
       - USE 'visualEffect' heavily to immerse the player.
-        - 'glitch': When the system is hacked, unstable, or reality distorts.
-        - 'shake_small': Minor impacts, loud noises, surprises.
-        - 'shake_heavy': Taking damage, explosions, massive failures.
-        - 'scan_line': When using a terminal, analyzing items, or receiving data.
-        - 'target_flash': Critical hit or target acquisition.
       - USE 'textStyle' to match the narrative voice.
-        - 'corrupted': When the character is hallucinating, the system is crashing, or an eldritch horror speaks.
-        - 'system_log': For notifications like [SYSTEM ALERT], [ITEM ACQUIRED], or terminal readouts.
       
-      Core Rules:
-      1. Speed: Keep narratives punchy, evocative and exciting.
-      2. State: Manage HP, Money, Inventory, and Abilities.
-      3. Combat: 
-         - When combat starts, set 'inCombat' true.
-         - Generate enemies appropriate for the theme.
-         - Use 'combatLog' for specific damage numbers.
-         - If player is hit, use 'visualEffect': 'flash_red' or 'shake_heavy'.
-         - Populate 'choices' with relevant abilities during combat.
-      4. Quests: Track objectives.
+      Start State: HP 100/100, Money 100, Inventory [Basic Item], GameStatus 'playing', Progress 0.
       
-      Start State: HP 100/100, Money 100, Inventory [Basic starting item], Location [Starting area], Abilities [Basic Attack, Special Skill], No Combat.
-      
-      Intro: Start the game by describing the opening scene based on the theme.`,
+      Intro: Start the game by describing the opening scene and the ULTIMATE GOAL.`,
       responseMimeType: "application/json",
       responseSchema: gameResponseSchema,
       thinkingConfig: {

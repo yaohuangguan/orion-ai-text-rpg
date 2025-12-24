@@ -15,9 +15,14 @@ export const translations = {
     waiting: "Waiting for response...",
     you: "YOU",
     system: "SYSTEM",
+    // Ending
+    victoryTitle: "MISSION ACCOMPLISHED",
+    defeatTitle: "CRITICAL FAILURE",
+    playAgain: "Play Again",
+    endSummary: "Simulation Report:",
     // Setup
     gameTitle: "Infinite AI RPG",
-    intro: "Experience an infinite text-based RPG powered by Gemini. Everything is generated in real-time.",
+    intro: "Experience a dynamic text-based RPG powered by Gemini. Every choice matters. Win or Lose.",
     selectLang: "Language / 语言",
     themeLabel: "Game Theme",
     charLabel: "Character Archetype",
@@ -75,9 +80,14 @@ export const translations = {
     waiting: "等待响应...",
     you: "你",
     system: "系统",
+    // Ending
+    victoryTitle: "任务完成",
+    defeatTitle: "任务失败",
+    playAgain: "再次挑战",
+    endSummary: "结局报告：",
     // Setup
     gameTitle: "无限 AI RPG",
-    intro: "体验由 Gemini 驱动的无尽冒险。每一个角色、物品和任务都是实时生成的。",
+    intro: "体验由 Gemini 驱动的动态冒险。每一个选择都至关重要。结局由你书写。",
     selectLang: "Language / 语言",
     themeLabel: "游戏题材",
     charLabel: "角色设定",

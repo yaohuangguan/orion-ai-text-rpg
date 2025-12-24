@@ -9,7 +9,7 @@ import SetupScreen from './components/SetupScreen';
 import TypewriterText from './components/TypewriterText';
 import AuthModal from './components/AuthModal';
 import SceneVisualizer from './components/SceneVisualizer';
-import { Terminal, RefreshCw, Volume2, VolumeX, ShieldAlert, User as UserIcon, LogOut, Battery, Save, Disc } from 'lucide-react';
+import { Terminal, RefreshCw, Volume2, VolumeX, ShieldAlert, User as UserIcon, LogOut, Battery, Save, Disc, Trophy, Skull } from 'lucide-react';
 import { audio } from './services/audioEngine';
 import { translations } from './utils/translations';
 import { authService } from './services/authService';
@@ -24,7 +24,10 @@ const INITIAL_STATE: GameState = {
   quests: [],
   inCombat: false,
   enemies: [],
-  abilities: []
+  abilities: [],
+  gameStatus: 'playing',
+  narrativeProgress: 0,
+  narrativeLabel: 'Story Progress'
 };
 
 const MAX_FREE_ACTIONS = 5;
@@ -157,6 +160,8 @@ const App: React.FC = () => {
         else if (response.audioCue === 'item_pickup') audio.playSFX('pickup');
         else if (response.audioCue === 'damage') audio.playSFX('damage');
         else if (response.audioCue === 'quest_update') audio.playSFX('success');
+        else if (response.audioCue === 'game_over') audio.playSFX('damage'); 
+        else if (response.audioCue === 'game_won') audio.playSFX('success');
       }, 200);
     }
 
@@ -175,6 +180,8 @@ const App: React.FC = () => {
   };
 
   const handleUserAction = async (action: string) => {
+    if (gameState.gameStatus !== 'playing') return;
+
     // 1. Check Limits
     if (!user && actionCount >= MAX_FREE_ACTIONS) {
       setHistory(prev => [...prev, {
@@ -241,7 +248,6 @@ const App: React.FC = () => {
           user={user}
           onOpenAuth={() => setShowAuthModal(true)}
           onLogout={handleLogout}
-          // SetupScreen now manages its own theme preview, or we can pass the initial one.
         />
         <AuthModal 
           isOpen={showAuthModal} 
@@ -256,10 +262,12 @@ const App: React.FC = () => {
     );
   }
 
+  const isGameOver = gameState.gameStatus !== 'playing';
+
   return (
     <div className={getContainerClass()}>
       
-      {/* Scanline Overlay (Only for Cyberpunk) */}
+      {/* Scanline Overlay */}
       {styles.scanline && <div className="scanline"></div>}
 
       {/* Dynamic Background */}
@@ -282,6 +290,30 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Game Over Overlay */}
+      {isGameOver && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-1000">
+          <div className={`max-w-lg w-full ${styles.panelBg} border ${gameState.gameStatus === 'victory' ? 'border-yellow-500/50' : 'border-red-500/50'} p-8 rounded-lg shadow-2xl text-center relative overflow-hidden`}>
+            <div className={`text-6xl mb-4 ${styles.fontHead} ${gameState.gameStatus === 'victory' ? 'text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]' : 'text-red-600 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]'}`}>
+              {gameState.gameStatus === 'victory' ? <Trophy size={64} className="mx-auto mb-4" /> : <Skull size={64} className="mx-auto mb-4" />}
+              {gameState.gameStatus === 'victory' ? t.victoryTitle : t.defeatTitle}
+            </div>
+            
+            <div className="text-gray-300 mb-8 leading-relaxed">
+               <strong className={`block mb-2 ${styles.accent}`}>{t.endSummary}</strong>
+               {gameState.endingSummary}
+            </div>
+
+            <button 
+              onClick={restartGame}
+              className={`${styles.button} text-white font-bold py-3 px-8 rounded shadow-lg transition-transform hover:scale-105 active:scale-95`}
+            >
+              {t.playAgain}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className={`h-14 border-b ${styles.accentBorder}/50 flex items-center justify-between px-6 bg-black/80 backdrop-blur-md sticky top-0 z-20 shadow-md`}>
         <div className="flex items-center gap-3">
@@ -292,7 +324,6 @@ const App: React.FC = () => {
             <h1 className={`text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400 ${styles.fontHead} leading-none`}>
               {t.gameTitle}
             </h1>
-            {/* Action Counter for Guests */}
             {!user && (
               <div className="flex items-center gap-1 text-[10px] text-yellow-500 mt-1">
                 <Battery size={10} />
@@ -302,7 +333,6 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-           {/* Save Button */}
            <button 
              onClick={handleSaveGame}
              className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-800/50 hover:bg-zinc-700/80 border border-zinc-700 rounded text-xs text-gray-300 transition-colors"
@@ -311,7 +341,6 @@ const App: React.FC = () => {
              {t.saveBtn}
            </button>
 
-           {/* User Status in Header */}
            {user ? (
              <div className={`hidden sm:flex items-center gap-2 text-xs ${styles.accent} border ${styles.accentBorder}/50 px-2 py-1 rounded bg-black/30`}>
                <UserIcon size={12} />
@@ -393,7 +422,6 @@ const App: React.FC = () => {
                     <div className="text-base">{msg.text}</div>
                   ) : (
                      <>
-                       {/* Main Narrative with Style support */}
                        {(idx === history.length - 1 && isTyping) ? (
                           <TypewriterText 
                             text={msg.text} 
@@ -409,7 +437,6 @@ const App: React.FC = () => {
                           />
                        )}
 
-                       {/* Combat Log Display */}
                        {msg.combatLog && msg.combatLog.length > 0 && (
                          <div className="mt-4 p-3 bg-red-950/40 border-l-2 border-red-500/50 text-xs space-y-1 animate-in slide-in-from-left duration-300 font-mono">
                            {msg.combatLog.map((log, i) => (
@@ -432,7 +459,6 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {/* Limit Reached Warning in Chat */}
             {!user && actionCount >= MAX_FREE_ACTIONS && (
               <div className="mx-auto max-w-md p-4 mt-4 bg-yellow-900/20 border border-yellow-600/50 rounded text-center animate-pulse">
                 <div className="text-yellow-500 font-bold mb-2 flex items-center justify-center gap-2">
@@ -456,13 +482,12 @@ const App: React.FC = () => {
              p-4 bg-gradient-to-t from-black via-black/95 to-transparent backdrop-blur-sm border-t border-white/5 flex flex-col gap-4
              ${gameState.inCombat ? 'border-t-red-900/30' : ''}
           `}>
-             {/* Combat Overlay Panel */}
              {gameState.inCombat && <CombatPanel enemies={gameState.enemies} lang={language} styles={styles} />}
 
              <InputArea 
                onSend={handleUserAction} 
                choices={currentChoices}
-               disabled={loading || isTyping || (!user && actionCount >= MAX_FREE_ACTIONS)}
+               disabled={loading || isTyping || (!user && actionCount >= MAX_FREE_ACTIONS) || isGameOver}
                isThinking={loading}
                lang={language}
                styles={styles}

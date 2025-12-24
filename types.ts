@@ -34,6 +34,8 @@ export interface Enemy {
   description: string;
 }
 
+export type GameStatus = 'playing' | 'victory' | 'defeat';
+
 export interface GameState {
   hp: number;
   maxHp: number;
@@ -44,10 +46,15 @@ export interface GameState {
   inCombat: boolean;
   enemies: Enemy[];
   abilities: string[];
+  // New fields for finite gameplay
+  gameStatus: GameStatus;
+  narrativeProgress: number; // 0 to 100
+  narrativeLabel: string; // e.g. "Corruption Level", "Cyberpsychosis", "Quest Progress"
+  endingSummary?: string; // Text summary of the ending
 }
 
 export type VisualEffectType = 'none' | 'glitch' | 'shake_small' | 'shake_heavy' | 'flash_red' | 'flash_white' | 'scan_line' | 'target_flash';
-export type AudioCueType = 'none' | 'combat_start' | 'combat_end' | 'item_pickup' | 'damage' | 'quest_update';
+export type AudioCueType = 'none' | 'combat_start' | 'combat_end' | 'item_pickup' | 'damage' | 'quest_update' | 'game_over' | 'game_won';
 export type TextStyleType = 'normal' | 'corrupted' | 'system_log';
 
 export interface GameResponse {
