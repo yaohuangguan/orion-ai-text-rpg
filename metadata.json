@@ -1,0 +1,5 @@
+{
+  "name": "Infinite Cyberpunk RPG",
+  "description": "An infinite text-based RPG set in Neo-Shanghai, powered by Gemini's Long Context capabilities with real-time UI state synchronization.",
+  "requestFramePermissions": []
+}
