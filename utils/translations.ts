@@ -47,9 +47,9 @@ export const translations = {
     // Auth & Limit
     loginBtn: "LOGIN / REGISTER",
     logoutBtn: "LOGOUT",
-    guestWarning: "GUEST MODE: Limited to 5 actions.",
-    limitReachedTitle: "Neural Link Depleted",
-    limitReachedDesc: "Free trial actions exhausted. Establish a permanent connection (Login) to continue your journey.",
+    guestWarning: "AUTHENTICATION REQUIRED: Please login to play.",
+    limitReachedTitle: "Neural Link Restricted",
+    limitReachedDesc: "Authentication required. Establish a permanent connection (Login) to access the Neural Network.",
     auth: {
       loginTitle: "Access Neural Net",
       registerTitle: "New Identity Registration",
@@ -112,9 +112,9 @@ export const translations = {
     // Auth & Limit
     loginBtn: "登录 / 注册",
     logoutBtn: "退出登录",
-    guestWarning: "游客模式：仅限 5 次操作",
-    limitReachedTitle: "神经链接耗尽",
-    limitReachedDesc: "免费试用次数已用完。建立永久连接（登录）以继续您的冒险。",
+    guestWarning: "身份验证：请先登录以开始游戏",
+    limitReachedTitle: "神经链接受限",
+    limitReachedDesc: "需要身份验证。建立永久连接（登录）以接入神经网络并开始您的冒险。",
     auth: {
       loginTitle: "接入神经网络",
       registerTitle: "注册新身份",

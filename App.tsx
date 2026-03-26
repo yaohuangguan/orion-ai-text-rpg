@@ -44,6 +44,7 @@ const App: React.FC = () => {
   const [currentChoices, setCurrentChoices] = useState<string[]>([]);
   const [visualEffect, setVisualEffect] = useState<VisualEffectType>('none');
   const [isMuted, setIsMuted] = useState(false);
+  const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   
   // Auth State
@@ -92,30 +93,42 @@ const App: React.FC = () => {
   }, [visualEffect]);
 
   const handleStartGame = async (config: GameConfig) => {
+    // Enforce login
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setLanguage(config.language);
-    setTheme(config.theme); // Set theme state
+    setTheme(config.theme); 
+    setGameConfig(config); // Store config for future actions
     setGameStarted(true);
     setLoading(true);
     setError(null);
     setHistory([]);
     setGameState(INITIAL_STATE);
-    setActionCount(0); // Reset action count per game
+    setActionCount(0);
     
     try {
       const response = await initializeGame(config);
       handleAIResponse(response);
-      audio.init(); // Init audio on start click
-    } catch (err) {
+      audio.init();
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to connect to the Neural Network. Check your API Key or connection.");
+      setError(err.message || "Neural connection failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleLoadGame = (data: SaveData) => {
-    setLanguage(data.language);
-    setTheme(data.theme);
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setLanguage(data.config.language);
+    setTheme(data.config.theme);
+    setGameConfig(data.config);
     setGameStarted(true);
     setGameState(data.state);
     setHistory(data.history);
@@ -124,11 +137,11 @@ const App: React.FC = () => {
   };
 
   const handleSaveGame = () => {
+    if (!gameConfig) return;
     const saveData: SaveData = {
       state: gameState,
       history: history,
-      theme: theme,
-      language: language,
+      config: gameConfig,
       timestamp: Date.now()
     };
     localStorage.setItem('rpg_save_slot_1', JSON.stringify(saveData));
@@ -142,9 +155,13 @@ const App: React.FC = () => {
     setGameState(INITIAL_STATE);
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await authService.logout();
     setUser(null);
+    setGameStarted(false);
+    setHistory([]);
+    setGameState(INITIAL_STATE);
+    setGameConfig(null);
   };
 
   const handleAIResponse = (response: GameResponse) => {
@@ -208,9 +225,18 @@ const App: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await sendPlayerAction(action);
+      // Prepare history for backend (Gemini parts format)
+      // Only include messages that have text
+      const historyForBackend = history
+        .filter(m => m.text)
+        .map(m => ({
+          role: m.role,
+          parts: [{ text: m.text }]
+        }));
+
+      const response = await sendPlayerAction(action, gameConfig!, historyForBackend);
       handleAIResponse(response);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setHistory(prev => [...prev, {
         role: 'model',

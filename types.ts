@@ -79,7 +79,6 @@ export interface ChatMessage {
 export interface SaveData {
   state: GameState;
   history: ChatMessage[];
-  theme: string;
-  language: Language;
+  config: GameConfig;
   timestamp: number;
 }

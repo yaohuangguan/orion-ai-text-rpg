@@ -42,7 +42,21 @@ export const authService = {
     return result as AuthResponse;
   },
 
-  logout() {
+  async logout() {
+    const token = this.getToken();
+    if (token) {
+      try {
+        await fetch(`${API_URL}/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token
+          }
+        });
+      } catch (err) {
+        console.error('Backend logout failed:', err);
+      }
+    }
     localStorage.removeItem('rpg_token');
     localStorage.removeItem('rpg_user');
   },
