@@ -1,7 +1,3 @@
-<div align="center">
-  <img width="1200" height="475" alt="Orion AI Text RPG Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Orion AI Text RPG
 
 Orion is a cinematic, AI-powered text adventure experience that leverages the power of Gemini to create dynamic, immersive narratives. Set across various themes from Cyberpunk to High Fantasy, Orion offers a unique journey where every choice matters and every story has a definitive conclusion.
